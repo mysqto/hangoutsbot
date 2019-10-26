@@ -1,6 +1,6 @@
 FROM python:latest
 LABEL description="Google Hangouts Bot"
-LABEL maintainer="http://github.com/hangoutsbot/hangoutsbot"
+LABEL maintainer="http://github.com/mysqto/hangoutsbot"
 WORKDIR /app
 ADD requirements.txt .
 RUN pip install -r requirements.txt
