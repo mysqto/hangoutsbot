@@ -15,3 +15,7 @@ aiohttp
 *.jpg
 
 venv
+
+# IDE related
+.idea
+.vscode
