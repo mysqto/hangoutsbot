@@ -84,7 +84,6 @@ class QSmsBot:
         message = event.text
 
         for keyword in self.keywords:
-            logger.info("keyword = {}".format(keyword))
             if keyword in message:
                 params = self.extract_verification_code(message)
                 if isinstance(params, list):
@@ -102,6 +101,7 @@ class QSmsBot:
             logger.warning("error sending sms {} : {}".format(params, e))
         except Exception as e:
             logger.warning("error sending sms {} : {}".format(params, e))
+            
         logger.info('SMS send with result {}'.format(result))
 
     def extract_verification_code(self, message):
