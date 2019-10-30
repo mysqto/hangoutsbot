@@ -22,10 +22,14 @@ class QSmsBot:
     app_id = None
     app_key = None
     default = None
+    code_regex = None
+    sign_regex = None
+    country_code = None
     receivers = []
     keywords = []
     template_id = None
     sms_sign = None
+    sender = None
     initialised = False
 
     def __init__(self, bot):
@@ -55,6 +59,12 @@ class QSmsBot:
                     self.sms_sign = config['sms_sign']
 
                 self.default = config['default_product']
+                self.code_regex = config['code_regex']
+                self.sign_regex = config['sign_regex']
+                self.country_code = config['country_code']
+
+                if self.country_code is None:
+                    self.country_code = 86
 
                 receivers = config['receivers']
                 keywords = config['keywords']
@@ -67,17 +77,19 @@ class QSmsBot:
             except Exception as e:
                 logger.warning("error loading qsms configuration {} : {}".format(config, e))
 
-        logger.info(
-            "config: app_id = {}, app_key= {}, template_id = {}, sms_sign = {} default = {}".format(self.app_id,
-                                                                                                    self.app_key,
-                                                                                                    self.template_id,
-                                                                                                    self.sms_sign,
-                                                                                                    self.default))
+        logger.info('config: app_id = {}, app_key= {}'.format(self.app_id, self.app_key))
+        logger.info('code_regex = {}, sign_regex= {}'.format(self.code_regex, self.sign_regex))
+        logger.info('template_id = {}, sms_sign = {}'.format(self.template_id, self.sms_sign))
+        logger.info('default = {}, country_code = {}'.format(self.default, self.country_code))
         logger.info("receivers = {}, keywords= {}".format(self.receivers, self.keywords))
 
         if self.app_id and self.app_key and len(self.receivers) > 0 and len(
-                self.keywords) > 0 and self.template_id and self.sms_sign and self.default:
+                self.keywords) > 0 and self.template_id and self.sms_sign and self.country_code\
+                and self.default and self.sign_regex and self.code_regex:
             self.initialised = True
+
+        if self.initialised:
+            self.sender = SmsMultiSender(self.app_id, self.app_key)
 
     def on_chat_message(self, bot, event, command):
 
@@ -92,36 +104,33 @@ class QSmsBot:
                 break
 
     def send_sms(self, params):
-        sender = SmsMultiSender(self.app_id, self.app_key)
 
         try:
-            result = sender.send_with_param(86, self.receivers,
-                                            self.template_id, params, sign=self.sms_sign, extend="", ext="")
+            result = self.sender.send_with_param(86, self.receivers, self.template_id,
+                                                 params, sign=self.sms_sign, extend="", ext="")
         except HTTPError as e:
             logger.warning("error sending sms {} : {}".format(params, e))
         except Exception as e:
             logger.warning("error sending sms {} : {}".format(params, e))
-            
+
         logger.info('SMS send with result {}'.format(result))
 
     def extract_verification_code(self, message):
         result = []
 
         # search for sign
-        regex = r'(\[.*\]|【.*】)'
-        pm = re.search(regex, message)
+        pm = re.search(self.sign_regex, message)
 
         if pm is not None:
             result.append(str(pm.group(0))[1:-1])
         else:
             result.append(self.default)
 
-        regex = r'(\d{8}|\d{7}|\d{6}|\d{3} \d{3}|\d{5}|\d{4})'
-        pm = re.search(regex, message)
+        pm = re.search(self.code_regex, message)
 
         if pm is None:
             return None
 
-        result.append(str(pm.group(0)))
+        result.append(str(pm.group(0)).replace(" ", ""))
 
         return result

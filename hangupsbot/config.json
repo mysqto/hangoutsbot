@@ -21,8 +21,8 @@
     }
   },
   "link_to_guide": "https://github.com/hangoutsbot/hangoutsbot/wiki/User-Guide",
-  "mentionall":true,
-  "silentmode":false,
+  "mentionall": true,
+  "silentmode": false,
   "mentionallwhitelist": [],
   "mentionerrors": true,
   "mentionquidproquo": false,
@@ -35,17 +35,28 @@
     "autoreply",
     "dnd",
     "starter",
+    "qsms",
     "remind"
   ],
-    "qsms": {
-    "default_product" : "Shadow",
+  "qsms": {
+    "default_product": "Shadow",
+    "code_regex": "(\\d{8}|\\d{7}|\\d{6}|\\d{3} \\d{3}|\\d{5}|\\d{4})",
+    "sign_regex": "(\\[.*\\]|【.*】)",
+    "country_code": "86",
     "receivers": [
-      "18652937798"
+      "18888888888"
     ],
     "keywords": [
-      "verify", "verification",
-      "password", "code", "otp", "OTP",
-      "驗證碼", "密码", "验证码", "密码"
+      "verify",
+      "verification",
+      "password",
+      "code",
+      "otp",
+      "OTP",
+      "驗證碼",
+      "密码",
+      "验证码",
+      "密码"
     ]
   }
 }
