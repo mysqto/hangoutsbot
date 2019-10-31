@@ -1,4 +1,4 @@
-FROM python:alpine
+FROM python:slim
 LABEL description="Google Hangouts Bot"
 LABEL maintainer="http://github.com/mysqto/hangoutsbot"
 WORKDIR /app
