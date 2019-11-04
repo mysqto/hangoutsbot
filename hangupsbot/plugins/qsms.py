@@ -99,7 +99,7 @@ class QSmsBot:
             if keyword in message:
                 params = self.extract_verification_code(message)
                 if isinstance(params, list):
-                    logger.info('extracted verification code: {}'.format(params))
+                    logger.info('extracted application and verification code: {}'.format(params))
                     self.send_sms(params)
                 break
 

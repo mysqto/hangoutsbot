@@ -1,4 +1,4 @@
-FROM python:slim
+FROM python:alpine
 LABEL description="Google Hangouts Bot"
 LABEL maintainer="http://github.com/mysqto/hangoutsbot"
 WORKDIR /app
@@ -8,6 +8,7 @@ RUN mkdir /data
 COPY hangupsbot/ ./
 VOLUME /data
 RUN mkdir -p /root/.local/share && ln -s /data /root/.local/share/hangupsbot
+RUN apk add bash
 ADD docker-entrypoint.sh .
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["python", "hangupsbot.py"]
