@@ -94,6 +94,8 @@ class HangupsBot(object):
         except NotImplementedError:
             pass
 
+    def client(self):
+        return self._client
 
     def set_locale(self, language_code, reuse=True):
         if not reuse or language_code not in self._locales:
