@@ -12,6 +12,19 @@ def _initialise(bot):
         plugins.register_handler(qsms_bot.on_chat_message, type="allmessages")
 
 
+def get_response_status(response):
+    try:
+        status = response.response_header.status
+
+        if status != hangups.hangouts_pb2.RESPONSE_STATUS_OK:
+            description = response.response_header.error_description
+            return 'Request failed with status {}: \'{}\''.format(status, description)
+        else:
+            return "success"
+    except Exception as ex:
+        return "unexpected error : {}".format(ex)
+
+
 def _get_lookup_spec(identifier):
     """Return EntityLookupSpec from phone number, email address, or gaia ID."""
     if identifier.startswith('+'):
@@ -98,11 +111,13 @@ class Forward:
         yield from self.load_users()
         for user in self.users:
             logger.info("user info chat_id = {}, name = {}, type = {}".format(user.chat_id, user.name, user.type))
+
             """try to get load or create a new conversation_id"""
             conversation_id = yield from self.get_1to1(user)
+
             if conversation_id:
                 response = yield from self.send_message(user, conversation_id, message)
-                logger.info("message sent to {} with response {}".format(user.name, response.response_header.status))
+                logger.info("message sent to {}, status : {}".format(user.name, get_response_status(response)))
 
     @asyncio.coroutine
     def lookup_users(self, identifiers):

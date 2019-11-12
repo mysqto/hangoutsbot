@@ -93,6 +93,10 @@ class QSmsBot:
 
     def on_chat_message(self, bot, event, command):
 
+        if event.user.id_.chat_id == self.bot.user_self()["chat_id"]:
+            logger.warning("message from myself is not supported")
+            return
+
         message = event.text
 
         for keyword in self.keywords:
