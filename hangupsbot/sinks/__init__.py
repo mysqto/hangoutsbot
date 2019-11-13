@@ -192,7 +192,7 @@ def aiohttp_terminate(groups):
     for constructors in aiohttp_list(groups):
         [server, handler, app, group] = constructors
 
-        yield from handler.finish_connections(1.0)
+        yield from handler.shutdown(1.0)
         server.close()
         yield from server.wait_closed()
         yield from app.cleanup()

@@ -157,7 +157,7 @@ class APIRequestHandler(AsyncRequestHandler):
 
         else:
             # attempt to send to a user id
-            results = yield from self._bot.coro_send_to_user(
+            results = yield from self._bot.coro_send_message_to_user(
                 id,
                 content,
                 context = { "reprocessor": reprocessor_context })
