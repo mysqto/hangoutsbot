@@ -139,7 +139,7 @@ def start_listening(bot=None, loop=None, name="", port=8000, certfile=None, webh
 
 
 
-def aiohttp_start(bot, name, port, certfile, RequestHandlerClass, group, callback=None):
+def aiohttp_start(bot, name, port, certfile, RequestHandlerClass, group, callback=None, keyfile=None):
     RequestHandler = RequestHandlerClass(bot)
 
     app = web.Application()
@@ -149,7 +149,7 @@ def aiohttp_start(bot, name, port, certfile, RequestHandlerClass, group, callbac
 
     if certfile:
         sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-        sslcontext.load_cert_chain(certfile)
+        sslcontext.load_cert_chain(certfile, keyfile=keyfile)
     else:
         sslcontext = None
 
