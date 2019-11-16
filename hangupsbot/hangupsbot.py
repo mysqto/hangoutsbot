@@ -431,35 +431,25 @@ class HangupsBot(object):
         return conversation
 
     @asyncio.coroutine
-    def coro_send_message_to_user(self, identifier, message, context=None):
-        conversation_id = yield from self.get_1to1_conversation(identifier)
+    def coro_send_message_to_user(self, identifier, message, image_id=None, otr_status=None, context=None):
+        conversation_id = yield from self.get_1to1_conversation_id(identifier)
 
         if not conversation_id:
             logger.warning("cannot get conversation for {}".format(identifier))
             return
 
-        otr_status = hangups.hangouts_pb2.OFF_THE_RECORD_STATUS_OFF_THE_RECORD
-        request = hangups.hangouts_pb2.SendChatMessageRequest(
-            request_header=self._client.get_request_header(),
-            event_request_header=hangups.hangouts_pb2.EventRequestHeader(
-                conversation_id=hangups.hangouts_pb2.ConversationId(
-                    id=conversation_id
-                ),
-                client_generated_id=self._client.get_client_generated_id(),
-                expected_otr=otr_status,
-                delivery_medium=hangups.hangouts_pb2.DeliveryMedium(
-                    medium_type=hangups.hangouts_pb2.DELIVERY_MEDIUM_GOOGLE_VOICE if
-                    identifier.startswith('+')
-                    else hangups.hangouts_pb2.DELIVERY_MEDIUM_BABEL
-                )
-            ),
-            message_content=hangups.hangouts_pb2.MessageContent(
-                segment=[
-                    hangups.ChatMessageSegment(message).serialize()
-                ],
-            ),
-        )
-        yield from self._client.send_chat_message(request)
+        conversation = FakeConversation(self, conversation_id)
+
+        context = self.prepare_context(context)
+
+        yield from conversation.send_message(message,
+                                             image_id=image_id,
+                                             otr_status=otr_status,
+                                             context=context,
+                                             delivery_medium=hangups.hangouts_pb2.DELIVERY_MEDIUM_GOOGLE_VOICE if
+                                             identifier.startswith('+')
+                                             else hangups.hangouts_pb2.DELIVERY_MEDIUM_BABEL
+                                             )
 
     @asyncio.coroutine
     def create_1to1_conversation(self, chat_id, name="Unknown"):
@@ -502,7 +492,7 @@ class HangupsBot(object):
         return None
 
     @asyncio.coroutine
-    def get_1to1_conversation(self, identifier):
+    def get_1to1_conversation_id(self, identifier):
         """
             find/create a 1-to-1 conversation with specified user
         """
@@ -840,14 +830,8 @@ class HangupsBot(object):
         if not self.send_html_to_user(user_id_or_conversation_id, html, context):
             self.send_html_to_conversation(user_id_or_conversation_id, html, context)
 
-    @asyncio.coroutine
-    def coro_send_message(self, conversation, message, context=None, image_id=None):
-        if not message and not image_id:
-            # at least a message OR an image_id must be supplied
-            return
-
+    def prepare_context(self, context=None):
         # get the context
-
         if not context:
             context = {}
 
@@ -857,6 +841,16 @@ class HangupsBot(object):
         if "base" not in context:
             # default legacy context
             context["base"] = self._messagecontext_legacy()
+
+        return context
+
+    @asyncio.coroutine
+    def coro_send_message(self, conversation, message, context=None, image_id=None):
+        if not message and not image_id:
+            # at least a message OR an image_id must be supplied
+            return
+
+        context = self.prepare_context(context)
 
         # get the conversation id
 

@@ -24,14 +24,25 @@ import plugins
 from sinks import aiohttp_start
 from sinks.base_bot_request_handler import AsyncRequestHandler
 
-
 logger = logging.getLogger(__name__)
 
 
 def _initialise(bot):
     _start_api(bot)
 
+
 reprocessor_queue = {}
+
+
+def successful_response(results):
+    if results:
+        content_type = "text/html"
+        results = results.encode("ascii", "xmlcharrefreplace")
+    else:
+        content_type = "text/plain"
+        results = "OK".encode('utf-8')
+
+    return web.Response(body=results, content_type=content_type)
 
 
 def response_received(bot, event, id, results, original_id):
@@ -78,18 +89,18 @@ def _start_api(bot):
 
 class APIRequestHandler(AsyncRequestHandler):
     def addroutes(self, router):
-        router.add_route("OPTIONS", "/", self.adapter_do_OPTIONS)
-        router.add_route("POST", "/", self.adapter_do_POST)
-        router.add_route('GET', '/{api_key}/{id}/{message:.*?}', self.adapter_do_GET)
-
+        super().addroutes(router)
+        router.add_route("OPTIONS", "/", self.adapter_do_options)
+        router.add_route("POST", "/", self.adapter_do_post)
+        router.add_route('GET', '/{api_key}/{id}/{message:.*?}', self.adapter_do_get)
 
     @asyncio.coroutine
-    def adapter_do_OPTIONS(self, request):
+    def adapter_do_options(self, request):
         origin = request.headers["Origin"]
 
         allowed_origins = self._bot.get_config_option("api_origins")
         if allowed_origins is None:
-            raise HTTPForbidden()
+            raise web.HTTPForbidden()
 
         if "*" == allowed_origins or "*" in allowed_origins:
             return web.Response(headers={
@@ -98,7 +109,7 @@ class APIRequestHandler(AsyncRequestHandler):
             })
 
         if not origin in allowed_origins:
-            raise HTTPForbidden()
+            raise web.HTTPForbidden()
 
         return web.Response(headers={
             "Access-Control-Allow-Origin": origin,
@@ -107,25 +118,27 @@ class APIRequestHandler(AsyncRequestHandler):
         })
 
     @asyncio.coroutine
-    def adapter_do_GET(self, request):
-        payload = { "sendto": request.match_info["id"],
-                    "key": request.match_info["api_key"],
-                    "content": unquote(request.match_info["message"]) }
+    def adapter_do_get(self, request):
+        payload = {"sendto": request.match_info["id"],
+                   "key": request.match_info["api_key"],
+                   "content": unquote(request.match_info["message"])}
 
-        results = yield from self.process_request( '', # IGNORED
-                                                   '', # IGNORED
-                                                   payload )
-        if results:
-            content_type="text/html"
-            results = results.encode("ascii", "xmlcharrefreplace")
-        else:
-            content_type="text/plain"
-            results = "OK".encode('utf-8')
-
-        return web.Response(body=results, content_type=content_type)
+        results = yield from self.do_process_request('',  # IGNORED
+                                                     '',  # IGNORED
+                                                     payload)
+        return successful_response(results)
 
     @asyncio.coroutine
-    def process_request(self, path, query_string, content):
+    def adapter_do_post(self, request):
+        raw_content = yield from request.content.read()
+
+        results = yield from self.do_process_request("",  # IGNORED
+                                                     "",  # IGNORED
+                                                     raw_content.decode("utf-8"))
+        return successful_response(results)
+
+    @asyncio.coroutine
+    def do_process_request(self, path, query_string, content):
         # XXX: bit hacky due to different routes...
         payload = content
         if isinstance(payload, str):
@@ -136,7 +149,7 @@ class APIRequestHandler(AsyncRequestHandler):
         api_key = self._bot.get_config_option("api_key")
 
         if payload["key"] != api_key:
-            raise ValueError("API key does not match")
+            raise web.HTTPForbidden()
 
         results = yield from self.send_actionable_message(payload["sendto"], payload["content"])
 
@@ -145,22 +158,22 @@ class APIRequestHandler(AsyncRequestHandler):
     @asyncio.coroutine
     def send_actionable_message(self, id, content):
         """reprocessor: allow message to be intepreted as a command"""
-        reprocessor_context = self._bot._handlers.attach_reprocessor( handle_as_command,
-                                                                      return_as_dict=True )
+        reprocessor_context = self._bot._handlers.attach_reprocessor(handle_as_command,
+                                                                     return_as_dict=True)
         reprocessor_id = reprocessor_context["id"]
 
         if id in self._bot.conversations.catalog:
             results = yield from self._bot.coro_send_message(
                 id,
                 content,
-                context = { "reprocessor": reprocessor_context })
+                context={"reprocessor": reprocessor_context})
 
         else:
             # attempt to send to a user id
             results = yield from self._bot.coro_send_message_to_user(
                 id,
                 content,
-                context = { "reprocessor": reprocessor_context })
+                context={"reprocessor": reprocessor_context})
 
         start_time = time.time()
         while time.time() - start_time < 3:

@@ -157,7 +157,7 @@ class FakeConversation(object):
         self.id_ = id_
 
     @asyncio.coroutine
-    def send_message(self, message, image_id=None, otr_status=None, context=None):
+    def send_message(self, message, image_id=None, otr_status=None, context=None, delivery_medium=hangups.hangouts_pb2.DELIVERY_MEDIUM_BABEL):
 
         """ChatMessageSegment: parse message"""
 
@@ -249,4 +249,7 @@ class FakeConversation(object):
                     event_request_header = hangups.hangouts_pb2.EventRequestHeader(
                         conversation_id=hangups.hangouts_pb2.ConversationId( id=self.id_ ),
                         client_generated_id=self._client.get_client_generated_id(),
+                        delivery_medium=hangups.hangouts_pb2.DeliveryMedium(
+                            medium_type=delivery_medium
+                        ),
                         expected_otr = otr_status )))

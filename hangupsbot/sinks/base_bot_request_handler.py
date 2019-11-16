@@ -9,13 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 class BaseBotRequestHandler(BaseHTTPRequestHandler):
-    _bot = None # set externally by the hangupsbot sink loader
+    _bot = None  # set externally by the hangupsbot sink loader
     sinkname = "UNKNOWN"
 
     def __init__(self, *args):
         self.sinkname = self.__class__.__name__
         BaseHTTPRequestHandler.__init__(self, *args)
-
 
     def do_POST(self):
         """handle incoming POST request
@@ -47,7 +46,6 @@ class BaseBotRequestHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             logger.exception(e)
-
 
     @asyncio.coroutine
     def process_request(self, path, query_string, content):
@@ -92,7 +90,6 @@ class BaseBotRequestHandler(BaseHTTPRequestHandler):
 
         yield from self.send_data(conversation_id, text, image_data=image_data, image_filename=image_filename)
 
-
     @asyncio.coroutine
     def send_data(self, conversation_id, text, image_data=None, image_filename=None, context=None):
         """sends text and/or image to a conversation
@@ -113,23 +110,22 @@ class BaseBotRequestHandler(BaseHTTPRequestHandler):
 
         yield from self._bot.coro_send_message(conversation_id, text, context=context, image_id=image_id)
 
-
     def log_error(self, format_string, *args):
-        logger.error("{} - {} {}".format(self.sinkname, self.address_string(), format_string%args))
+        logger.error("{} - {} {}".format(self.sinkname, self.address_string(), format_string % args))
 
     def log_message(self, format_string, *args):
-        logger.info("{} - {} {}".format(self.sinkname, self.address_string(), format_string%args))
+        logger.info("{} - {} {}".format(self.sinkname, self.address_string(), format_string % args))
 
 
 class AsyncRequestHandler:
     bot = None
-    _bot = None # ensure backward compatibility for legacy subclasses
+    _bot = None  # ensure backward compatibility for legacy subclasses
 
     def __init__(self, *args):
         self.sinkname = self.__class__.__name__
-        if(args[0]):
+        if (args[0]):
             self.bot = args[0]
-            self._bot = self.bot # backward-compatibility
+            self._bot = self.bot  # backward-compatibility
 
     def addroutes(self, router):
         router.add_route("POST", "/{convid}", self.adapter_do_POST)
@@ -139,9 +135,9 @@ class AsyncRequestHandler:
     def adapter_do_POST(self, request):
         raw_content = yield from request.content.read()
 
-        results = yield from self.process_request( request.path,
-                                                   parse_qs(request.query_string),
-                                                   raw_content.decode("utf-8") )
+        results = yield from self.process_request(request.path,
+                                                  parse_qs(request.query_string),
+                                                  raw_content.decode("utf-8"))
 
         if results:
             content_type="text/html"
@@ -159,7 +155,8 @@ class AsyncRequestHandler:
         path = path.split("/")
         conversation_id = path[1]
         if not conversation_id:
-            raise ValueError("conversation id must be provided in path")
+            logger.warning("conversation id must be provided in path")
+            raise web.HTTPBadRequest()
 
         text = None
         if "echo" in payload:
@@ -180,7 +177,8 @@ class AsyncRequestHandler:
                 logger.info("automatic image filename: {}".format(image_filename))
 
         if not text and not image_data:
-            raise ValueError("nothing to send")
+            logger.warning("no text or image_data in, nothing to send")
+            raise web.HTTPBadRequest()
 
         results = yield from self.send_data(conversation_id, text, image_data=image_data, image_filename=image_filename)
 
@@ -201,7 +199,11 @@ class AsyncRequestHandler:
             image_id = yield from self.bot._client.upload_image(image_data, filename=image_filename)
 
         if not text and not image_id:
-            raise ValueError("nothing to send")
+            logger.warning("no text or image_id in, nothing to send")
+            raise web.HTTPBadRequest()
 
-        results = yield from self.bot.coro_send_message(conversation_id, text, context=context, image_id=image_id)
+        results = yield from self.bot.coro_send_message_to_user(conversation_id,
+                                                                text,
+                                                                context=context,
+                                                                image_id=image_id)
         return "OK"
