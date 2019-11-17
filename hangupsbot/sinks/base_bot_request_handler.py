@@ -131,6 +131,9 @@ class AsyncRequestHandler:
         router.add_route("POST", "/{convid}", self.adapter_do_POST)
         router.add_route("POST", "/{convid}/", self.adapter_do_POST)
 
+    def auth(self, key):
+        return True
+
     @asyncio.coroutine
     def adapter_do_POST(self, request):
         raw_content = yield from request.content.read()
@@ -157,6 +160,14 @@ class AsyncRequestHandler:
         if not conversation_id:
             logger.warning("conversation id must be provided in path")
             raise web.HTTPBadRequest()
+
+        key = None
+        if "key" in payload:
+            key = payload["key"]
+
+        if not self.auth(key):
+            logger.warning("api auth failed for request {}".format(path))
+            raise web.HTTPForbidden()
 
         text = None
         if "echo" in payload:

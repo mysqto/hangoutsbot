@@ -95,8 +95,16 @@ class APIRequestHandler(AsyncRequestHandler):
         router.add_route("POST", "/", self.adapter_do_post)
         router.add_route('GET', '/{api_key}/{id}/{message:.*?}', self.adapter_do_get)
 
+    def auth(self, key):
+        api_key = self._bot.get_config_option("api_key")
+        return key == api_key
+
     @asyncio.coroutine
     def adapter_do_options(self, request):
+        key = request.headers["key"]
+        if not self.auth(key):
+            raise web.HTTPForbidden()
+
         origin = request.headers["Origin"]
 
         allowed_origins = self._bot.get_config_option("api_origins")
@@ -147,9 +155,7 @@ class APIRequestHandler(AsyncRequestHandler):
             payload = json.loads(payload)
         # XXX: else GET - everything in query string (already parsed before it got here)
 
-        api_key = self._bot.get_config_option("api_key")
-
-        if payload["key"] != api_key:
+        if not self.auth(payload["key"]):
             raise web.HTTPForbidden()
 
         results = yield from self.send_actionable_message(payload["sendto"], payload["content"])
