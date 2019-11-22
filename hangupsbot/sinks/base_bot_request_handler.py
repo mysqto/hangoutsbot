@@ -153,7 +153,12 @@ class AsyncRequestHandler:
 
     @asyncio.coroutine
     def process_request(self, path, query_string, content):
-        payload = json.loads(content)
+        payload = None
+        try:
+            payload = json.loads(content)
+        except Exception as ex:
+            logger.warning("error decoding content[{}] as json : {}".format(content, ex))
+            raise web.HTTPBadRequest()
 
         path = path.split("/")
         conversation_id = path[1]

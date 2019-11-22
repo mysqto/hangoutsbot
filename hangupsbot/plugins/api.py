@@ -152,7 +152,11 @@ class APIRequestHandler(AsyncRequestHandler):
         payload = content
         if isinstance(payload, str):
             # XXX: POST - payload in incoming request BODY (and not yet parsed, do it here)
-            payload = json.loads(payload)
+            try:
+                payload = json.loads(payload)
+            except Exception as ex:
+                logger.warning("error decoding content[{}] as json : {}".format(content, ex))
+                raise web.HTTPBadRequest()
         # XXX: else GET - everything in query string (already parsed before it got here)
 
         if not self.auth(payload["key"]):
