@@ -10,7 +10,7 @@ VOLUME /data
 RUN mkdir -p /root/.local/share && ln -s /data /root/.local/share/hangupsbot
 RUN wget -q -O /etc/ssl/cacert.pem https://curl.haxx.se/ca/cacert.pem
 RUN apk update && apk upgrade
-RUN apk add bash
+RUN apk add gcc bash
 ADD docker-entrypoint.sh .
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["python", "hangupsbot.py"]
