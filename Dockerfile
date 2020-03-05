@@ -3,7 +3,7 @@ LABEL description="Google Hangouts Bot"
 LABEL maintainer="http://github.com/mysqto/hangoutsbot"
 WORKDIR /app
 RUN apk update && apk upgrade
-RUN apk add bash
+RUN apk add bash gcc binutils g++ libgcc libstdc++ linux-headers make autoconf
 ADD requirements.txt .
 RUN pip install -r requirements.txt
 RUN mkdir /data
